@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, or, and } from "drizzle-orm";
+import { eq, ilike, or, and, count } from "drizzle-orm";
 import { db, scamReportsTable, usersTable } from "@workspace/db";
 import { CreateScamReportBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/session";
@@ -43,8 +43,8 @@ router.get("/scam-reports", async (req, res): Promise<void> => {
     ) as typeof where;
   }
 
-  const [{ count }] = await db
-    .select({ count: db.$count(scamReportsTable, where) })
+  const [{ count: total }] = await db
+    .select({ count: count() })
     .from(scamReportsTable)
     .where(where);
 
@@ -63,12 +63,11 @@ router.get("/scam-reports", async (req, res): Promise<void> => {
   }
   const reporterMap = new Map(reporters.map(r => [r.id, r.name]));
 
-  const total = Number(count);
   res.json({
     reports: reports.map(r => formatReport(r, r.reporterId ? reporterMap.get(r.reporterId) : null)),
-    total,
+    total: Number(total),
     page,
-    totalPages: Math.ceil(total / limit),
+    totalPages: Math.ceil(Number(total) / limit),
   });
 });
 

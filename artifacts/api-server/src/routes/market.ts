@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { db, marketItemsTable, usersTable } from "@workspace/db";
 import { CreateMarketItemBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/session";
@@ -35,8 +35,8 @@ router.get("/market", async (req, res): Promise<void> => {
     where = and(eq(marketItemsTable.status, "AVAILABLE"), eq(marketItemsTable.gameType, gameType)) as typeof where;
   }
 
-  const [{ count }] = await db
-    .select({ count: db.$count(marketItemsTable, where) })
+  const [{ total }] = await db
+    .select({ total: count() })
     .from(marketItemsTable)
     .where(where);
 
@@ -55,12 +55,11 @@ router.get("/market", async (req, res): Promise<void> => {
   }
   const sellerMap = new Map(sellers.map(s => [s.id, s.name]));
 
-  const total = Number(count);
   res.json({
     items: items.map(i => formatItem(i, i.sellerId ? sellerMap.get(i.sellerId) : null)),
-    total,
+    total: Number(total),
     page,
-    totalPages: Math.ceil(total / limit),
+    totalPages: Math.ceil(Number(total) / limit),
   });
 });
 
