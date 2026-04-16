@@ -354,6 +354,13 @@ export const AdminListReportsResponseItem = zod.object({
 export const AdminListReportsResponse = zod.array(AdminListReportsResponseItem);
 
 /**
+ * @summary Delete a scam report
+ */
+export const AdminDeleteReportParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Approve a scam report
  */
 export const ApproveReportParams = zod.object({

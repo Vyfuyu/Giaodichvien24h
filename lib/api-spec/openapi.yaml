@@ -401,6 +401,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/ScamReport"
 
+  /admin/reports/{id}:
+    delete:
+      operationId: adminDeleteReport
+      tags: [admin]
+      summary: Delete a scam report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/reports/{id}/approve:
     patch:
       operationId: approveReport

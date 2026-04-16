@@ -1,16 +1,36 @@
-import { useListMarketItems } from "@workspace/api-client-react";
+import { useListMarketItems, useAdminDeleteMarketItem } from "@workspace/api-client-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { ShoppingBag, Gamepad2, ChevronRight, Plus } from "lucide-react";
+import { ShoppingBag, Gamepad2, Plus, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Market() {
   const { data, isLoading } = useListMarketItems();
   const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+
+  const deleteItem = useAdminDeleteMarketItem();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const handleDelete = (e: React.MouseEvent, id: number, title: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Xóa tin đăng "${title}"?`)) return;
+    deleteItem.mutate({ id }, {
+      onSuccess: () => {
+        toast({ title: "Đã xóa tin đăng" });
+        queryClient.invalidateQueries({ queryKey: ["/api/market"] });
+      },
+      onError: () => toast({ title: "Lỗi xóa tin đăng", variant: "destructive" }),
+    });
+  };
 
   return (
     <MobileLayout>
@@ -49,34 +69,45 @@ export default function Market() {
               ))
             ) : data?.items?.length ? (
               data.items.map((item) => (
-                <Link key={item.id} href={`/market/${item.id}`}>
-                  <Card className="overflow-hidden h-full flex flex-col hover:border-primary/50 transition-colors bg-card border-border cursor-pointer">
-                    <div className="relative aspect-square bg-muted">
-                      {item.images && item.images.length > 0 ? (
-                        <img 
-                          src={item.images[0]} 
-                          alt={item.title} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <Gamepad2 className="w-8 h-8 opacity-20" />
+                <div key={item.id} className="relative">
+                  <Link href={`/market/${item.id}`}>
+                    <Card className="overflow-hidden h-full flex flex-col hover:border-primary/50 transition-colors bg-card border-border cursor-pointer">
+                      <div className="relative aspect-square bg-muted">
+                        {item.images && item.images.length > 0 ? (
+                          <img
+                            src={item.images[0]}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <Gamepad2 className="w-8 h-8 opacity-20" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2">
+                          <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
+                            {item.gameType}
+                          </Badge>
                         </div>
-                      )}
-                      <div className="absolute top-2 left-2">
-                        <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
-                          {item.gameType}
-                        </Badge>
+                        {isAdmin && (
+                          <button
+                            className="absolute top-2 right-2 bg-destructive/90 hover:bg-destructive text-white rounded-md p-1 transition-colors"
+                            onClick={(e) => handleDelete(e, item.id, item.title)}
+                            title="Xóa tin đăng"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
-                    </div>
-                    <CardContent className="p-3 flex flex-col flex-1">
-                      <h3 className="font-medium text-sm line-clamp-2 mb-2 flex-1">{item.title}</h3>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className="font-bold text-primary">{item.price.toLocaleString()}đ</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      <CardContent className="p-3 flex flex-col flex-1">
+                        <h3 className="font-medium text-sm line-clamp-2 mb-2 flex-1">{item.title}</h3>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="font-bold text-primary">{item.price.toLocaleString()}đ</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
               ))
             ) : (
               <div className="col-span-2 text-center py-12 bg-muted/30 rounded-xl border border-dashed border-border">

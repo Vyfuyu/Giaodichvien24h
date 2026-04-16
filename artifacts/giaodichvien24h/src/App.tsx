@@ -20,6 +20,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminReports from "@/pages/admin/reports";
 import AdminMarket from "@/pages/admin/market";
 import AdminUsers from "@/pages/admin/users";
+import AdminGdv from "@/pages/admin/gdv";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,9 @@ function Router() {
       </Route>
       <Route path="/admin/users">
         <ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/gdv">
+        <ProtectedRoute adminOnly><AdminGdv /></ProtectedRoute>
       </Route>
 
       <Route component={NotFound} />
