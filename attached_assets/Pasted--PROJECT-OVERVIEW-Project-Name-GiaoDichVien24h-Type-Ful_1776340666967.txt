@@ -1,0 +1,66 @@
+# PROJECT OVERVIEW
+Project Name: GiaoDichVien24h
+Type: Full-stack Web Application (Mobile-first SPA feel)
+Core Concept: A platform to check/report scammers, hire verified middlemen (Giao Dịch Viên), and trade digital assets securely. Similar to a native mobile app but built on the web.
+# TECH STACK
+ * Framework: Next.js (App Router)
+ * Styling: Tailwind CSS + Shadcn UI
+ * Icons: Lucide React
+ * Database: PostgreSQL (using Prisma ORM)
+ * Authentication: NextAuth.js (Credentials + Google/Facebook)
+ * Storage: Cloudinary or Supabase Storage (for uploading scam evidence & market images)
+# USER ROLES (Role-Based Access Control)
+ 1. Guest: Can search scammers, view reports, view middlemen, view market.
+ 2. Member: Can submit scam reports, post items on the market, view their transaction history.
+ 3. Middleman (GDV): Special verified members. Have a public profile. Can verify trades.
+ 4. Super Admin: Full system control, approve/reject reports, manage users, add Middlemen.
+# DATABASE SCHEMA (Core Models for Prisma)
+ 1. User
+   * id, name, email, phone, password, role (MEMBER, GDV, ADMIN), avatar, created_at
+ 2. MiddlemanProfile (One-to-One with User)
+   * user_id, real_name, services_offered (array), insurance_fund (money amount), social_links (FB, Zalo, Telegram), total_transactions, success_rate, verification_badge
+ 3. ScamReport
+   * id, reporter_id, scammer_name, scammer_phone, scammer_bank_number, scammer_bank_name, scammer_social_link, amount_lost, description, evidence_images (array), status (PENDING, APPROVED, REJECTED), created_at
+ 4. MarketItem
+   * id, seller_id, title, game_type, price, description, images (array), status (AVAILABLE, SOLD), created_at
+ 5. TransactionHistory (Lịch sử giao dịch)
+   * id, type (MARKET_SALE, MIDDLEMAN_FEE), amount, status, created_at, user_id
+# UI/UX ARCHITECTURE (Mobile-First Layout)
+ * The UI MUST look like a native mobile app centered on the screen (max-w-md mx-auto) with a fixed Bottom Navigation Bar.
+ * Bottom Navigation Tabs:
+   1. Home (Trang Chủ): Search bar, Stats, Latest Scam Warnings.
+   2. Market (Chợ Giao Dịch): List of digital items for sale.
+   3. Report (Tố Cáo): Floating Action Button (FAB) in the center. Form to upload scammer info.
+   4. Middlemen (DS GDV): Grid view of verified Middlemen profiles.
+   5. Account/History (Tài Khoản): User profile, their reports status, transaction history.
+# DETAILED FEATURES & WORKFLOWS
+## 1. Public / Client Features
+ * Home: Big search input to check phone numbers or bank accounts against the ScamReport database (only APPROVED reports). Display stats (total scammers, total money lost).
+ * Report Form: Multi-step or tabbed form (Bank scam vs. Web scam). Requires image uploads.
+ * Middleman Profile Page: Clicking a GDV in the list opens their detailed page showing their insurance fund, contact buttons, and services.
+## 2. Super Admin Dashboard (Route: /admin)
+Create a secure, desktop-optimized dashboard for the Admin.
+ * Feature 1: Report Moderation. View PENDING ScamReports. See evidence images. Button to "Approve" (makes it public) or "Reject".
+ * Feature 2: Market Moderation. Delete scam market posts.
+ * Feature 3: System Logs & History. View all site activities.
+## 3. Workflow: How to add a Middleman (Giao Dịch Viên)
+Implement this exact flow in the Admin Dashboard:
+ 1. Admin goes to "User Management" in the Dashboard.
+ 2. Admin searches for an existing User by email or phone.
+ 3. Admin clicks "Promote to GDV".
+ 4. A form opens for the Admin to fill out the MiddlemanProfile details:
+   * Real Full Name
+   * Amount of Insurance Fund (Quỹ bảo hiểm đã đóng)
+   * Social Contact Links (Facebook, Zalo)
+   * Allowed Services (e.g., FB Services, Game Acc Trading)
+ 5. Upon saving, the user's role updates to 'GDV' and they immediately appear on the public "DS GDV" tab.
+# EXECUTION STEPS FOR AI AGENT
+Please build this step-by-step:
+Step 1: Initialize Next.js project and configure Tailwind & Prisma.
+Step 2: Create the Prisma schema based on the models above and push to db.
+Step 3: Setup NextAuth for basic email/password authentication.
+Step 4: Build the Mobile-first UI layout with the Bottom Navigation bar.
+Step 5: Implement the Client pages (Home, Market, Middleman List).
+Step 6: Implement the Report Submission flow (with image upload placeholder).
+Step 7: Build the Admin Dashboard (specifically the Moderation queue and the "Add Middleman" feature).
+Start with Step 1 and 2, let me know when done, and wait for my confirmation before proceeding.

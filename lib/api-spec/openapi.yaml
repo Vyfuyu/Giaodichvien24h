@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: GiaoDichVien24h API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: scam-reports
+    description: Scam report operations
+  - name: middlemen
+    description: Middleman (GDV) operations
+  - name: market
+    description: Market item operations
+  - name: admin
+    description: Admin operations
+  - name: stats
+    description: Public statistics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +37,478 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get public stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /scam-reports:
+    get:
+      operationId: listScamReports
+      tags: [scam-reports]
+      summary: List approved scam reports (public)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of scam reports
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScamReportListResponse"
+
+    post:
+      operationId: createScamReport
+      tags: [scam-reports]
+      summary: Submit a scam report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScamReportBody"
+      responses:
+        "201":
+          description: Report submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScamReport"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /scam-reports/{id}:
+    get:
+      operationId: getScamReport
+      tags: [scam-reports]
+      summary: Get a scam report by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Scam report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScamReport"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /my/reports:
+    get:
+      operationId: getMyReports
+      tags: [scam-reports]
+      summary: Get current user's reports
+      responses:
+        "200":
+          description: User's reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScamReport"
+
+  /middlemen:
+    get:
+      operationId: listMiddlemen
+      tags: [middlemen]
+      summary: List all verified middlemen
+      responses:
+        "200":
+          description: List of middlemen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MiddlemanProfile"
+
+  /middlemen/{userId}:
+    get:
+      operationId: getMiddleman
+      tags: [middlemen]
+      summary: Get middleman profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Middleman profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiddlemanProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /market:
+    get:
+      operationId: listMarketItems
+      tags: [market]
+      summary: List available market items
+      parameters:
+        - name: gameType
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Market items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketItemListResponse"
+
+    post:
+      operationId: createMarketItem
+      tags: [market]
+      summary: Post a market item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMarketItemBody"
+      responses:
+        "201":
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketItem"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /market/{id}:
+    get:
+      operationId: getMarketItem
+      tags: [market]
+      summary: Get a market item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Market item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /my/market:
+    get:
+      operationId: getMyMarketItems
+      tags: [market]
+      summary: Get current user's market listings
+      responses:
+        "200":
+          description: User's market items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketItem"
+
+  /admin/reports:
+    get:
+      operationId: adminListReports
+      tags: [admin]
+      summary: Admin list all reports with optional status filter
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScamReport"
+
+  /admin/reports/{id}/approve:
+    patch:
+      operationId: approveReport
+      tags: [admin]
+      summary: Approve a scam report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScamReport"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/reports/{id}/reject:
+    patch:
+      operationId: rejectReport
+      tags: [admin]
+      summary: Reject a scam report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScamReport"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/market/{id}:
+    delete:
+      operationId: adminDeleteMarketItem
+      tags: [admin]
+      summary: Admin delete a market item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: Admin list all users
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{id}/promote-gdv:
+    post:
+      operationId: promoteToGdv
+      tags: [admin]
+      summary: Promote user to GDV (Middleman) role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromoteGdvBody"
+      responses:
+        "200":
+          description: User promoted to GDV
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiddlemanProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Admin dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +519,366 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        password:
+          type: string
+      required:
+        - name
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [MEMBER, GDV, ADMIN]
+        avatar:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+
+    Stats:
+      type: object
+      properties:
+        totalScammers:
+          type: integer
+        totalAmountLost:
+          type: integer
+        totalReports:
+          type: integer
+        totalMiddlemen:
+          type: integer
+        recentReports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScamReport"
+      required:
+        - totalScammers
+        - totalAmountLost
+        - totalReports
+        - totalMiddlemen
+        - recentReports
+
+    ScamReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        reporterId:
+          type: ["integer", "null"]
+        reporterName:
+          type: ["string", "null"]
+        scammerName:
+          type: string
+        scammerPhone:
+          type: ["string", "null"]
+        scammerBankNumber:
+          type: ["string", "null"]
+        scammerBankName:
+          type: ["string", "null"]
+        scammerSocialLink:
+          type: ["string", "null"]
+        amountLost:
+          type: ["integer", "null"]
+        description:
+          type: string
+        evidenceImages:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        createdAt:
+          type: string
+      required:
+        - id
+        - scammerName
+        - description
+        - evidenceImages
+        - status
+        - createdAt
+
+    CreateScamReportBody:
+      type: object
+      properties:
+        scammerName:
+          type: string
+        scammerPhone:
+          type: ["string", "null"]
+        scammerBankNumber:
+          type: ["string", "null"]
+        scammerBankName:
+          type: ["string", "null"]
+        scammerSocialLink:
+          type: ["string", "null"]
+        amountLost:
+          type: ["integer", "null"]
+        description:
+          type: string
+        evidenceImages:
+          type: array
+          items:
+            type: string
+      required:
+        - scammerName
+        - description
+
+    ScamReportListResponse:
+      type: object
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScamReport"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - reports
+        - total
+        - page
+        - totalPages
+
+    MiddlemanProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        userAvatar:
+          type: ["string", "null"]
+        realName:
+          type: string
+        servicesOffered:
+          type: array
+          items:
+            type: string
+        insuranceFund:
+          type: integer
+        facebookLink:
+          type: ["string", "null"]
+        zaloLink:
+          type: ["string", "null"]
+        telegramLink:
+          type: ["string", "null"]
+        totalTransactions:
+          type: integer
+        successRate:
+          type: number
+        verificationBadge:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - userName
+        - realName
+        - servicesOffered
+        - insuranceFund
+        - totalTransactions
+        - successRate
+        - verificationBadge
+        - createdAt
+
+    PromoteGdvBody:
+      type: object
+      properties:
+        realName:
+          type: string
+        insuranceFund:
+          type: integer
+        servicesOffered:
+          type: array
+          items:
+            type: string
+        facebookLink:
+          type: ["string", "null"]
+        zaloLink:
+          type: ["string", "null"]
+        telegramLink:
+          type: ["string", "null"]
+      required:
+        - realName
+        - insuranceFund
+        - servicesOffered
+
+    MarketItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        sellerId:
+          type: ["integer", "null"]
+        sellerName:
+          type: ["string", "null"]
+        title:
+          type: string
+        gameType:
+          type: string
+        price:
+          type: integer
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [AVAILABLE, SOLD]
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - gameType
+        - price
+        - description
+        - images
+        - status
+        - createdAt
+
+    CreateMarketItemBody:
+      type: object
+      properties:
+        title:
+          type: string
+        gameType:
+          type: string
+        price:
+          type: integer
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+      required:
+        - title
+        - gameType
+        - price
+        - description
+
+    MarketItemListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - totalPages
+
+    AdminDashboard:
+      type: object
+      properties:
+        pendingReports:
+          type: integer
+        totalUsers:
+          type: integer
+        totalMiddlemen:
+          type: integer
+        totalMarketItems:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+      required:
+        - pendingReports
+        - totalUsers
+        - totalMiddlemen
+        - totalMarketItems
+        - recentActivity
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - description
+        - createdAt
