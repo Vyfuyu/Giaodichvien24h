@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useRegister } from "@workspace/api-client-react";
+import { useRegister, setAuthTokenGetter } from "@workspace/api-client-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,16 +38,25 @@ export default function Register() {
 
   const onSubmit = (data: z.infer<typeof registerSchema>) => {
     register.mutate({ data }, {
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const token = (res as any)?.token;
+        if (token) {
+          localStorage.setItem("auth_token", token);
+          setAuthTokenGetter(() => localStorage.getItem("auth_token"));
+        }
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        toast({ title: "Đăng ký thành công" });
+        toast({ title: "Đăng ký thành công! Chào mừng bạn." });
         setLocation("/account");
       },
       onError: (error: any) => {
-        toast({ 
-          title: "Đăng ký thất bại", 
-          description: error?.response?.data?.error || "Có lỗi xảy ra",
-          variant: "destructive" 
+        const msg =
+          error?.data?.error ||
+          error?.data?.message ||
+          "Có lỗi xảy ra, vui lòng thử lại";
+        toast({
+          title: "Đăng ký thất bại",
+          description: msg,
+          variant: "destructive",
         });
       }
     });
@@ -78,7 +87,7 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>Tên hiển thị</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nguyễn Văn A" {...field} />
+                        <Input placeholder="Nguyễn Văn A" autoComplete="name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -91,7 +100,7 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="example@email.com" {...field} />
+                        <Input placeholder="example@email.com" autoComplete="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -104,7 +113,7 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>Số điện thoại (Tuỳ chọn)</FormLabel>
                       <FormControl>
-                        <Input placeholder="0912345678" {...field} />
+                        <Input placeholder="0912345678" autoComplete="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -117,7 +126,7 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>Mật khẩu</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

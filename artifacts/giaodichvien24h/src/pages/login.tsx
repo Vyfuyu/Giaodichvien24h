@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useLogin } from "@workspace/api-client-react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,16 +35,25 @@ export default function Login() {
 
   const onSubmit = (data: z.infer<typeof loginSchema>) => {
     login.mutate({ data }, {
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const token = (res as any)?.token;
+        if (token) {
+          localStorage.setItem("auth_token", token);
+          setAuthTokenGetter(() => localStorage.getItem("auth_token"));
+        }
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         toast({ title: "Đăng nhập thành công" });
         setLocation("/account");
       },
       onError: (error: any) => {
-        toast({ 
-          title: "Đăng nhập thất bại", 
-          description: error?.response?.data?.error || "Vui lòng kiểm tra lại thông tin",
-          variant: "destructive" 
+        const msg =
+          error?.data?.error ||
+          error?.data?.message ||
+          "Vui lòng kiểm tra lại email và mật khẩu";
+        toast({
+          title: "Đăng nhập thất bại",
+          description: msg,
+          variant: "destructive",
         });
       }
     });
@@ -75,7 +84,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="example@email.com" {...field} />
+                        <Input placeholder="example@email.com" autoComplete="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -88,7 +97,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Mật khẩu</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

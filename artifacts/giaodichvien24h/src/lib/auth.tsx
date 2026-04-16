@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext } from "react";
+import { ReactNode, createContext, useContext, useEffect } from "react";
 import { useGetMe, getGetMeQueryKey, User } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 
@@ -33,23 +33,35 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-export function ProtectedRoute({ children, adminOnly = false }: { children: ReactNode; adminOnly?: boolean }) {
+export function ProtectedRoute({
+  children,
+  adminOnly = false,
+}: {
+  children: ReactNode;
+  adminOnly?: boolean;
+}) {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      setLocation("/login");
+    } else if (adminOnly && user.role !== "ADMIN") {
+      setLocation("/");
+    }
+  }, [user, isLoading, adminOnly, setLocation]);
+
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  if (!user) {
-    setLocation("/login");
-    return null;
-  }
-
-  if (adminOnly && user.role !== "ADMIN") {
-    setLocation("/");
-    return null;
-  }
+  if (!user) return null;
+  if (adminOnly && user.role !== "ADMIN") return null;
 
   return <>{children}</>;
 }

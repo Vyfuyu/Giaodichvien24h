@@ -1,6 +1,7 @@
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useAuth } from "@/lib/auth";
-import { useGetMyReports, getGetMyReportsQueryKey, useGetMyMarketItems, getGetMyMarketItemsQueryKey, useLogout } from "@workspace/api-client-react";
+import { useGetMyReports, getGetMyReportsQueryKey, useGetMyMarketItems, getGetMyMarketItemsQueryKey, useLogout, setAuthTokenGetter } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { format } from "date-fns";
 export default function Account() {
   const { user } = useAuth();
   const logout = useLogout();
+  const queryClient = useQueryClient();
   
   const { data: reports, isLoading: reportsLoading } = useGetMyReports({
     query: { enabled: !!user, queryKey: getGetMyReportsQueryKey() }
@@ -25,8 +27,17 @@ export default function Account() {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
-        window.location.href = "/login";
-      }
+        localStorage.removeItem("auth_token");
+        setAuthTokenGetter(() => null);
+        queryClient.clear();
+        window.location.href = "/";
+      },
+      onError: () => {
+        localStorage.removeItem("auth_token");
+        setAuthTokenGetter(() => null);
+        queryClient.clear();
+        window.location.href = "/";
+      },
     });
   };
 
