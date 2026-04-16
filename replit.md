@@ -38,10 +38,10 @@ Full-stack Vietnamese anti-scam and digital marketplace platform. Mobile-first S
 - **Status**: NORMAL / SCAM / TRUSTED (set by admin)
 - **Badge**: NONE / TRUSTED_GDV / TRUSTED_SELLER (set by admin)
 
-## Admin Credentials (Dev)
+## Admin Credentials
 
 - Email: `admin@giaodichvien24h.vn`
-- Password: `Admin@123`
+- Password: `admin@2008`
 
 ## Admin Capabilities
 
@@ -53,6 +53,31 @@ Full-stack Vietnamese anti-scam and digital marketplace platform. Mobile-first S
 - Set user role (MEMBER / GDV / ADMIN)
 - Mark users as SCAM or TRUSTED
 - Set user badges (GDV Uy Tín / Người Bán Uy Tín)
+
+## Railway Deployment
+
+Single service deployment (API + frontend served from same process):
+
+**Required environment variables on Railway:**
+- `DATABASE_URL` — Tự động từ Railway PostgreSQL plugin
+- `PORT` — Tự động từ Railway
+
+**Build command** (đã cấu hình trong `railway.toml`):
+```
+pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/giaodichvien24h run build && pnpm --filter @workspace/api-server run build
+```
+
+**Start command:**
+```
+node scripts/railway-start.mjs
+```
+
+Script khởi động sẽ tự động:
+1. Chạy DB migration (`drizzle-kit push --force`)
+2. Tạo tài khoản admin mặc định nếu chưa có
+3. Khởi động API server (phục vụ cả frontend tĩnh)
+
+**Health check:** `GET /api/healthz`
 
 ## Key Commands
 
