@@ -1,5 +1,0 @@
-[phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
-
-[phases.build]
-cmds = ["BASE_PATH=/ pnpm --filter @workspace/giaodichvien24h run build && pnpm --filter @workspace/api-server run build"]
