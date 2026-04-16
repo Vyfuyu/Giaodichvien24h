@@ -23,6 +23,8 @@ tags:
     description: Admin operations
   - name: stats
     description: Public statistics
+  - name: storage
+    description: Object storage operations
 
 paths:
   /healthz:
@@ -109,6 +111,31 @@ paths:
       responses:
         "200":
           description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update current user profile (name, avatar)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Profile updated
           content:
             application/json:
               schema:
@@ -424,6 +451,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/market:
+    get:
+      operationId: adminListMarketItems
+      tags: [admin]
+      summary: Admin list all market items (all statuses)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, AVAILABLE, SOLD, REJECTED]
+      responses:
+        "200":
+          description: All market items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketItemListResponse"
+
   /admin/market/{id}:
     delete:
       operationId: adminDeleteMarketItem
@@ -438,6 +484,56 @@ paths:
       responses:
         "204":
           description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/market/{id}/approve:
+    patch:
+      operationId: adminApproveMarketItem
+      tags: [admin]
+      summary: Admin approve a market item (set to AVAILABLE)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Item approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/market/{id}/reject:
+    patch:
+      operationId: adminRejectMarketItem
+      tags: [admin]
+      summary: Admin reject a market item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Item rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketItem"
         "404":
           description: Not found
           content:
@@ -464,6 +560,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/User"
+
+  /admin/users/{id}:
+    delete:
+      operationId: adminDeleteUser
+      tags: [admin]
+      summary: Admin delete a user account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/users/{id}/promote-gdv:
     post:
@@ -496,6 +613,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/users/{id}/role:
+    patch:
+      operationId: adminSetUserRole
+      tags: [admin]
+      summary: Admin set user role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserRoleBody"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/status:
+    patch:
+      operationId: adminSetUserStatus
+      tags: [admin]
+      summary: Admin set user status and badge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserStatusBody"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/middlemen/{id}:
+    delete:
+      operationId: adminRemoveGdv
+      tags: [admin]
+      summary: Admin remove GDV (revoke GDV status)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: GDV removed
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/dashboard:
     get:
       operationId: getAdminDashboard
@@ -508,6 +708,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
 
 components:
   schemas:
@@ -562,6 +781,14 @@ components:
         - email
         - password
 
+    UpdateProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        avatar:
+          type: ["string", "null"]
+
     AuthResponse:
       type: object
       properties:
@@ -575,6 +802,8 @@ components:
       properties:
         id:
           type: integer
+        uid:
+          type: ["string", "null"]
         name:
           type: string
         email:
@@ -584,6 +813,12 @@ components:
         role:
           type: string
           enum: [MEMBER, GDV, ADMIN]
+        status:
+          type: string
+          enum: [NORMAL, SCAM, TRUSTED]
+        badge:
+          type: string
+          enum: [NONE, TRUSTED_GDV, TRUSTED_SELLER]
         avatar:
           type: ["string", "null"]
         createdAt:
@@ -593,7 +828,28 @@ components:
         - name
         - email
         - role
+        - status
+        - badge
         - createdAt
+
+    SetUserRoleBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [MEMBER, GDV, ADMIN]
+      required:
+        - role
+
+    SetUserStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [NORMAL, SCAM, TRUSTED]
+        badge:
+          type: string
+          enum: [NONE, TRUSTED_GDV, TRUSTED_SELLER]
 
     Stats:
       type: object
@@ -791,7 +1047,7 @@ components:
             type: string
         status:
           type: string
-          enum: [AVAILABLE, SOLD]
+          enum: [PENDING, AVAILABLE, SOLD, REJECTED]
         createdAt:
           type: string
       required:
@@ -849,6 +1105,8 @@ components:
       properties:
         pendingReports:
           type: integer
+        pendingMarketItems:
+          type: integer
         totalUsers:
           type: integer
         totalMiddlemen:
@@ -861,6 +1119,7 @@ components:
             $ref: "#/components/schemas/ActivityItem"
       required:
         - pendingReports
+        - pendingMarketItems
         - totalUsers
         - totalMiddlemen
         - totalMarketItems
@@ -882,3 +1141,28 @@ components:
         - type
         - description
         - createdAt
+
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+      required:
+        - name
+        - size
+        - contentType
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+      required:
+        - uploadURL
+        - objectPath

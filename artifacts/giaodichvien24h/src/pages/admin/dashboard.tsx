@@ -1,7 +1,7 @@
 import { useGetAdminDashboard } from "@workspace/api-client-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldAlert, Users, Store, Activity, Clock } from "lucide-react";
+import { ShieldAlert, Users, Store, Clock, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AdminDashboard() {
@@ -60,6 +60,15 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{data?.totalMarketItems || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tin Chợ Chờ Duyệt</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-500">{(data as any)?.pendingMarketItems || 0}</div>
             </CardContent>
           </Card>
         </div>

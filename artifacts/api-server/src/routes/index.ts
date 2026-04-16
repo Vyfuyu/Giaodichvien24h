@@ -6,6 +6,7 @@ import scamReportsRouter from "./scam-reports";
 import middlemenRouter from "./middlemen";
 import marketRouter from "./market";
 import adminRouter from "./admin";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(scamReportsRouter);
 router.use(middlemenRouter);
 router.use(marketRouter);
 router.use(adminRouter);
+router.use(storageRouter);
 
 export default router;

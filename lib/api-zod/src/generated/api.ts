@@ -35,10 +35,13 @@ export const LoginBody = zod.object({
 export const LoginResponse = zod.object({
   user: zod.object({
     id: zod.number(),
+    uid: zod.string().nullish(),
     name: zod.string(),
     email: zod.string(),
     phone: zod.string().nullish(),
     role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+    status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]),
+    badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]),
     avatar: zod.string().nullish(),
     createdAt: zod.string(),
   }),
@@ -56,10 +59,34 @@ export const LogoutResponse = zod.object({
  */
 export const GetMeResponse = zod.object({
   id: zod.number(),
+  uid: zod.string().nullish(),
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
   role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+  status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]),
+  badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]),
+  avatar: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Update current user profile (name, avatar)
+ */
+export const UpdateProfileBody = zod.object({
+  name: zod.string().optional(),
+  avatar: zod.string().nullish(),
+});
+
+export const UpdateProfileResponse = zod.object({
+  id: zod.number(),
+  uid: zod.string().nullish(),
+  name: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+  status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]),
+  badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]),
   avatar: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -245,7 +272,7 @@ export const ListMarketItemsResponse = zod.object({
       price: zod.number(),
       description: zod.string(),
       images: zod.array(zod.string()),
-      status: zod.enum(["AVAILABLE", "SOLD"]),
+      status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]),
       createdAt: zod.string(),
     }),
   ),
@@ -281,7 +308,7 @@ export const GetMarketItemResponse = zod.object({
   price: zod.number(),
   description: zod.string(),
   images: zod.array(zod.string()),
-  status: zod.enum(["AVAILABLE", "SOLD"]),
+  status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]),
   createdAt: zod.string(),
 });
 
@@ -297,7 +324,7 @@ export const GetMyMarketItemsResponseItem = zod.object({
   price: zod.number(),
   description: zod.string(),
   images: zod.array(zod.string()),
-  status: zod.enum(["AVAILABLE", "SOLD"]),
+  status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]),
   createdAt: zod.string(),
 });
 export const GetMyMarketItemsResponse = zod.array(GetMyMarketItemsResponseItem);
@@ -373,10 +400,77 @@ export const RejectReportResponse = zod.object({
 });
 
 /**
+ * @summary Admin list all market items (all statuses)
+ */
+export const AdminListMarketItemsQueryParams = zod.object({
+  status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]).optional(),
+});
+
+export const AdminListMarketItemsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      sellerId: zod.number().nullish(),
+      sellerName: zod.string().nullish(),
+      title: zod.string(),
+      gameType: zod.string(),
+      price: zod.number(),
+      description: zod.string(),
+      images: zod.array(zod.string()),
+      status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]),
+      createdAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  totalPages: zod.number(),
+});
+
+/**
  * @summary Admin delete a market item
  */
 export const AdminDeleteMarketItemParams = zod.object({
   id: zod.coerce.number(),
+});
+
+/**
+ * @summary Admin approve a market item (set to AVAILABLE)
+ */
+export const AdminApproveMarketItemParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminApproveMarketItemResponse = zod.object({
+  id: zod.number(),
+  sellerId: zod.number().nullish(),
+  sellerName: zod.string().nullish(),
+  title: zod.string(),
+  gameType: zod.string(),
+  price: zod.number(),
+  description: zod.string(),
+  images: zod.array(zod.string()),
+  status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Admin reject a market item
+ */
+export const AdminRejectMarketItemParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminRejectMarketItemResponse = zod.object({
+  id: zod.number(),
+  sellerId: zod.number().nullish(),
+  sellerName: zod.string().nullish(),
+  title: zod.string(),
+  gameType: zod.string(),
+  price: zod.number(),
+  description: zod.string(),
+  images: zod.array(zod.string()),
+  status: zod.enum(["PENDING", "AVAILABLE", "SOLD", "REJECTED"]),
+  createdAt: zod.string(),
 });
 
 /**
@@ -388,14 +482,24 @@ export const AdminListUsersQueryParams = zod.object({
 
 export const AdminListUsersResponseItem = zod.object({
   id: zod.number(),
+  uid: zod.string().nullish(),
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
   role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+  status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]),
+  badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]),
   avatar: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem);
+
+/**
+ * @summary Admin delete a user account
+ */
+export const AdminDeleteUserParams = zod.object({
+  id: zod.coerce.number(),
+});
 
 /**
  * @summary Promote user to GDV (Middleman) role
@@ -431,10 +535,67 @@ export const PromoteToGdvResponse = zod.object({
 });
 
 /**
+ * @summary Admin set user role
+ */
+export const AdminSetUserRoleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminSetUserRoleBody = zod.object({
+  role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+});
+
+export const AdminSetUserRoleResponse = zod.object({
+  id: zod.number(),
+  uid: zod.string().nullish(),
+  name: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+  status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]),
+  badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]),
+  avatar: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Admin set user status and badge
+ */
+export const AdminSetUserStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminSetUserStatusBody = zod.object({
+  status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]).optional(),
+  badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]).optional(),
+});
+
+export const AdminSetUserStatusResponse = zod.object({
+  id: zod.number(),
+  uid: zod.string().nullish(),
+  name: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  role: zod.enum(["MEMBER", "GDV", "ADMIN"]),
+  status: zod.enum(["NORMAL", "SCAM", "TRUSTED"]),
+  badge: zod.enum(["NONE", "TRUSTED_GDV", "TRUSTED_SELLER"]),
+  avatar: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Admin remove GDV (revoke GDV status)
+ */
+export const AdminRemoveGdvParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Admin dashboard summary
  */
 export const GetAdminDashboardResponse = zod.object({
   pendingReports: zod.number(),
+  pendingMarketItems: zod.number(),
   totalUsers: zod.number(),
   totalMiddlemen: zod.number(),
   totalMarketItems: zod.number(),
@@ -446,4 +607,18 @@ export const GetAdminDashboardResponse = zod.object({
       createdAt: zod.string(),
     }),
   ),
+});
+
+/**
+ * @summary Request a presigned upload URL
+ */
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string(),
+  size: zod.number(),
+  contentType: zod.string(),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string(),
+  objectPath: zod.string(),
 });

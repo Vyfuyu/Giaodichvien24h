@@ -1,10 +1,25 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, count } from "drizzle-orm";
 import { db, scamReportsTable, marketItemsTable, usersTable, middlemanProfilesTable, activityLogTable } from "@workspace/db";
-import { PromoteToGdvBody } from "@workspace/api-zod";
+import { PromoteToGdvBody, AdminSetUserRoleBody, AdminSetUserStatusBody } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/session";
 
 const router: IRouter = Router();
+
+function formatUser(u: typeof usersTable.$inferSelect) {
+  return {
+    id: u.id,
+    uid: u.uid,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    role: u.role,
+    status: u.status,
+    badge: u.badge,
+    avatar: u.avatar,
+    createdAt: u.createdAt.toISOString(),
+  };
+}
 
 function formatReport(r: typeof scamReportsTable.$inferSelect, reporterName?: string | null) {
   return {
@@ -21,6 +36,21 @@ function formatReport(r: typeof scamReportsTable.$inferSelect, reporterName?: st
     evidenceImages: r.evidenceImages ?? [],
     status: r.status,
     createdAt: r.createdAt.toISOString(),
+  };
+}
+
+function formatMarketItem(item: typeof marketItemsTable.$inferSelect, sellerName?: string | null) {
+  return {
+    id: item.id,
+    sellerId: item.sellerId,
+    sellerName: sellerName ?? null,
+    title: item.title,
+    gameType: item.gameType,
+    price: item.price,
+    description: item.description,
+    images: item.images ?? [],
+    status: item.status,
+    createdAt: item.createdAt.toISOString(),
   };
 }
 
@@ -45,60 +75,83 @@ router.get("/admin/reports", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.patch("/admin/reports/:id/approve", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid ID" });
-    return;
-  }
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   const [report] = await db.update(scamReportsTable).set({ status: "APPROVED" }).where(eq(scamReportsTable.id, id)).returning();
-  if (!report) {
-    res.status(404).json({ error: "Report not found" });
-    return;
-  }
+  if (!report) { res.status(404).json({ error: "Report not found" }); return; }
 
-  await db.insert(activityLogTable).values({ type: "REPORT_APPROVED", description: `Report #${id} approved: ${report.scammerName}` });
-
+  await db.insert(activityLogTable).values({ type: "REPORT_APPROVED", description: `Duyệt báo cáo #${id}: ${report.scammerName}` });
   res.json(formatReport(report));
 });
 
 router.patch("/admin/reports/:id/reject", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid ID" });
-    return;
-  }
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   const [report] = await db.update(scamReportsTable).set({ status: "REJECTED" }).where(eq(scamReportsTable.id, id)).returning();
-  if (!report) {
-    res.status(404).json({ error: "Report not found" });
-    return;
-  }
+  if (!report) { res.status(404).json({ error: "Report not found" }); return; }
 
-  await db.insert(activityLogTable).values({ type: "REPORT_REJECTED", description: `Report #${id} rejected: ${report.scammerName}` });
-
+  await db.insert(activityLogTable).values({ type: "REPORT_REJECTED", description: `Từ chối báo cáo #${id}: ${report.scammerName}` });
   res.json(formatReport(report));
 });
 
-router.delete("/admin/market/:id", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid ID" });
-    return;
+router.get("/admin/market", requireAdmin, async (req, res): Promise<void> => {
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+
+  let items;
+  if (status === "PENDING" || status === "AVAILABLE" || status === "SOLD" || status === "REJECTED") {
+    items = await db.select().from(marketItemsTable).where(eq(marketItemsTable.status, status)).orderBy(marketItemsTable.createdAt);
+  } else {
+    items = await db.select().from(marketItemsTable).orderBy(marketItemsTable.createdAt);
   }
+
+  const sellerIds = items.map(i => i.sellerId).filter((id): id is number => id !== null);
+  let sellers: Array<{ id: number; name: string }> = [];
+  if (sellerIds.length > 0) {
+    sellers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable);
+  }
+  const sellerMap = new Map(sellers.map(s => [s.id, s.name]));
+
+  res.json({
+    items: items.map(i => formatMarketItem(i, i.sellerId ? sellerMap.get(i.sellerId) : null)),
+    total: items.length,
+    page: 1,
+    totalPages: 1,
+  });
+});
+
+router.delete("/admin/market/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   const [item] = await db.delete(marketItemsTable).where(eq(marketItemsTable.id, id)).returning();
-  if (!item) {
-    res.status(404).json({ error: "Item not found" });
-    return;
-  }
+  if (!item) { res.status(404).json({ error: "Item not found" }); return; }
 
-  await db.insert(activityLogTable).values({ type: "MARKET_DELETED", description: `Market item #${id} deleted: ${item.title}` });
-
+  await db.insert(activityLogTable).values({ type: "MARKET_DELETED", description: `Xóa tin đăng #${id}: ${item.title}` });
   res.sendStatus(204);
+});
+
+router.patch("/admin/market/:id/approve", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [item] = await db.update(marketItemsTable).set({ status: "AVAILABLE" }).where(eq(marketItemsTable.id, id)).returning();
+  if (!item) { res.status(404).json({ error: "Item not found" }); return; }
+
+  await db.insert(activityLogTable).values({ type: "MARKET_APPROVED", description: `Duyệt tin đăng #${id}: ${item.title}` });
+  res.json(formatMarketItem(item));
+});
+
+router.patch("/admin/market/:id/reject", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [item] = await db.update(marketItemsTable).set({ status: "REJECTED" }).where(eq(marketItemsTable.id, id)).returning();
+  if (!item) { res.status(404).json({ error: "Item not found" }); return; }
+
+  await db.insert(activityLogTable).values({ type: "MARKET_REJECTED", description: `Từ chối tin đăng #${id}: ${item.title}` });
+  res.json(formatMarketItem(item));
 });
 
 router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
@@ -117,36 +170,67 @@ router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
     users = await db.select().from(usersTable).orderBy(usersTable.createdAt);
   }
 
-  res.json(users.map(u => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    phone: u.phone,
-    role: u.role,
-    avatar: u.avatar,
-    createdAt: u.createdAt.toISOString(),
-  })));
+  res.json(users.map(formatUser));
+});
+
+router.delete("/admin/users/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  if (id === req.sessionUser!.id) {
+    res.status(400).json({ error: "Cannot delete your own account" });
+    return;
+  }
+
+  await db.delete(middlemanProfilesTable).where(eq(middlemanProfilesTable.userId, id));
+  const [user] = await db.delete(usersTable).where(eq(usersTable.id, id)).returning();
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  await db.insert(activityLogTable).values({ type: "USER_DELETED", description: `Xóa tài khoản: ${user.name} (${user.email})` });
+  res.sendStatus(204);
+});
+
+router.patch("/admin/users/:id/role", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = AdminSetUserRoleBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [user] = await db.update(usersTable).set({ role: parsed.data.role }).where(eq(usersTable.id, id)).returning();
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  await db.insert(activityLogTable).values({ type: "USER_ROLE_CHANGED", description: `Đổi role ${user.name} → ${parsed.data.role}` });
+  res.json(formatUser(user));
+});
+
+router.patch("/admin/users/:id/status", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = AdminSetUserStatusBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const updates: Partial<typeof usersTable.$inferInsert> = {};
+  if (parsed.data.status !== undefined) updates.status = parsed.data.status;
+  if (parsed.data.badge !== undefined) updates.badge = parsed.data.badge;
+
+  const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  await db.insert(activityLogTable).values({ type: "USER_STATUS_CHANGED", description: `Cập nhật trạng thái ${user.name}: ${user.status} / ${user.badge}` });
+  res.json(formatUser(user));
 });
 
 router.post("/admin/users/:id/promote-gdv", requireAdmin, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid ID" });
-    return;
-  }
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   const parsed = PromoteToGdvBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
-  if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
   await db.update(usersTable).set({ role: "GDV" }).where(eq(usersTable.id, id));
 
@@ -176,7 +260,7 @@ router.post("/admin/users/:id/promote-gdv", requireAdmin, async (req, res): Prom
     profile = created;
   }
 
-  await db.insert(activityLogTable).values({ type: "USER_PROMOTED_GDV", description: `User ${user.name} promoted to GDV` });
+  await db.insert(activityLogTable).values({ type: "USER_PROMOTED_GDV", description: `Nâng cấp GDV: ${user.name}` });
 
   res.json({
     id: profile.id,
@@ -196,8 +280,24 @@ router.post("/admin/users/:id/promote-gdv", requireAdmin, async (req, res): Prom
   });
 });
 
+router.delete("/admin/middlemen/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [profile] = await db.delete(middlemanProfilesTable).where(eq(middlemanProfilesTable.userId, id)).returning();
+  if (!profile) { res.status(404).json({ error: "GDV profile not found" }); return; }
+
+  await db.update(usersTable).set({ role: "MEMBER" }).where(eq(usersTable.id, id));
+
+  const [user] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, id));
+  await db.insert(activityLogTable).values({ type: "GDV_REMOVED", description: `Thu hồi GDV: ${user?.name ?? id}` });
+
+  res.sendStatus(204);
+});
+
 router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> => {
   const [pendingCount] = await db.select({ count: count() }).from(scamReportsTable).where(eq(scamReportsTable.status, "PENDING"));
+  const [pendingMarketCount] = await db.select({ count: count() }).from(marketItemsTable).where(eq(marketItemsTable.status, "PENDING"));
   const [userCount] = await db.select({ count: count() }).from(usersTable);
   const [gdvCount] = await db.select({ count: count() }).from(middlemanProfilesTable);
   const [marketCount] = await db.select({ count: count() }).from(marketItemsTable);
@@ -210,6 +310,7 @@ router.get("/admin/dashboard", requireAdmin, async (_req, res): Promise<void> =>
 
   res.json({
     pendingReports: pendingCount.count,
+    pendingMarketItems: pendingMarketCount.count,
     totalUsers: userCount.count,
     totalMiddlemen: gdvCount.count,
     totalMarketItems: marketCount.count,

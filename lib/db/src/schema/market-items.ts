@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
 
-export const marketItemStatusEnum = pgEnum("market_item_status", ["AVAILABLE", "SOLD"]);
+export const marketItemStatusEnum = pgEnum("market_item_status", ["PENDING", "AVAILABLE", "SOLD", "REJECTED"]);
 
 export const marketItemsTable = pgTable("market_items", {
   id: serial("id").primaryKey(),
@@ -13,7 +13,7 @@ export const marketItemsTable = pgTable("market_items", {
   price: integer("price").notNull(),
   description: text("description").notNull(),
   images: text("images").array().notNull().default([]),
-  status: marketItemStatusEnum("status").notNull().default("AVAILABLE"),
+  status: marketItemStatusEnum("status").notNull().default("PENDING"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

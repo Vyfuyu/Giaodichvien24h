@@ -75,7 +75,7 @@ router.post("/market", requireAuth, async (req, res): Promise<void> => {
     sellerId: req.sessionUser!.id,
     ...parsed.data,
     images: parsed.data.images ?? [],
-    status: "AVAILABLE",
+    status: "PENDING",
   }).returning();
 
   res.status(201).json(formatItem(item, req.sessionUser!.name));

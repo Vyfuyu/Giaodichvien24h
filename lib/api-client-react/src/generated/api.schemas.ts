@@ -30,6 +30,12 @@ export interface LoginBody {
   password: string;
 }
 
+export interface UpdateProfileBody {
+  name?: string;
+  /** @nullable */
+  avatar?: string | null;
+}
+
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const UserRole = {
@@ -38,13 +44,33 @@ export const UserRole = {
   ADMIN: "ADMIN",
 } as const;
 
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+
+export const UserStatus = {
+  NORMAL: "NORMAL",
+  SCAM: "SCAM",
+  TRUSTED: "TRUSTED",
+} as const;
+
+export type UserBadge = (typeof UserBadge)[keyof typeof UserBadge];
+
+export const UserBadge = {
+  NONE: "NONE",
+  TRUSTED_GDV: "TRUSTED_GDV",
+  TRUSTED_SELLER: "TRUSTED_SELLER",
+} as const;
+
 export interface User {
   id: number;
+  /** @nullable */
+  uid?: string | null;
   name: string;
   email: string;
   /** @nullable */
   phone?: string | null;
   role: UserRole;
+  status: UserStatus;
+  badge: UserBadge;
   /** @nullable */
   avatar?: string | null;
   createdAt: string;
@@ -52,6 +78,42 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
+}
+
+export type SetUserRoleBodyRole =
+  (typeof SetUserRoleBodyRole)[keyof typeof SetUserRoleBodyRole];
+
+export const SetUserRoleBodyRole = {
+  MEMBER: "MEMBER",
+  GDV: "GDV",
+  ADMIN: "ADMIN",
+} as const;
+
+export interface SetUserRoleBody {
+  role: SetUserRoleBodyRole;
+}
+
+export type SetUserStatusBodyStatus =
+  (typeof SetUserStatusBodyStatus)[keyof typeof SetUserStatusBodyStatus];
+
+export const SetUserStatusBodyStatus = {
+  NORMAL: "NORMAL",
+  SCAM: "SCAM",
+  TRUSTED: "TRUSTED",
+} as const;
+
+export type SetUserStatusBodyBadge =
+  (typeof SetUserStatusBodyBadge)[keyof typeof SetUserStatusBodyBadge];
+
+export const SetUserStatusBodyBadge = {
+  NONE: "NONE",
+  TRUSTED_GDV: "TRUSTED_GDV",
+  TRUSTED_SELLER: "TRUSTED_SELLER",
+} as const;
+
+export interface SetUserStatusBody {
+  status?: SetUserStatusBodyStatus;
+  badge?: SetUserStatusBodyBadge;
 }
 
 export type ScamReportStatus =
@@ -154,8 +216,10 @@ export type MarketItemStatus =
   (typeof MarketItemStatus)[keyof typeof MarketItemStatus];
 
 export const MarketItemStatus = {
+  PENDING: "PENDING",
   AVAILABLE: "AVAILABLE",
   SOLD: "SOLD",
+  REJECTED: "REJECTED",
 } as const;
 
 export interface MarketItem {
@@ -197,10 +261,22 @@ export interface ActivityItem {
 
 export interface AdminDashboard {
   pendingReports: number;
+  pendingMarketItems: number;
   totalUsers: number;
   totalMiddlemen: number;
   totalMarketItems: number;
   recentActivity: ActivityItem[];
+}
+
+export interface RequestUploadUrlBody {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+export interface RequestUploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
 }
 
 export type ListScamReportsParams = {
@@ -225,6 +301,20 @@ export type AdminListReportsStatus =
 export const AdminListReportsStatus = {
   PENDING: "PENDING",
   APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+} as const;
+
+export type AdminListMarketItemsParams = {
+  status?: AdminListMarketItemsStatus;
+};
+
+export type AdminListMarketItemsStatus =
+  (typeof AdminListMarketItemsStatus)[keyof typeof AdminListMarketItemsStatus];
+
+export const AdminListMarketItemsStatus = {
+  PENDING: "PENDING",
+  AVAILABLE: "AVAILABLE",
+  SOLD: "SOLD",
   REJECTED: "REJECTED",
 } as const;
 
