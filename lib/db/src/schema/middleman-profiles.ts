@@ -5,7 +5,8 @@ import { usersTable } from "./users";
 
 export const middlemanProfilesTable = pgTable("middleman_profiles", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => usersTable.id).unique(),
+  userId: integer("user_id").references(() => usersTable.id).unique(),
+  avatar: text("avatar"),
   realName: text("real_name").notNull(),
   servicesOffered: text("services_offered").array().notNull().default([]),
   insuranceFund: integer("insurance_fund").notNull().default(0),

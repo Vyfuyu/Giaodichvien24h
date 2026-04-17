@@ -233,6 +233,56 @@ router.patch("/admin/users/:id/status", requireAdmin, async (req, res): Promise<
   res.json(formatUser(user));
 });
 
+router.post("/admin/gdv", requireAdmin, async (req, res): Promise<void> => {
+  const { realName, avatar, insuranceFund, servicesOffered, facebookLink, zaloLink, telegramLink } = req.body;
+  if (!realName || typeof realName !== "string" || realName.trim().length < 2) {
+    res.status(400).json({ error: "Tên thật bắt buộc (tối thiểu 2 ký tự)" });
+    return;
+  }
+  if (!insuranceFund || isNaN(Number(insuranceFund)) || Number(insuranceFund) < 0) {
+    res.status(400).json({ error: "Quỹ bảo hiểm không hợp lệ" });
+    return;
+  }
+
+  const services: string[] = Array.isArray(servicesOffered)
+    ? servicesOffered
+    : typeof servicesOffered === "string"
+      ? servicesOffered.split(",").map((s: string) => s.trim()).filter(Boolean)
+      : ["Trung gian mua bán"];
+
+  const [profile] = await db.insert(middlemanProfilesTable).values({
+    userId: null,
+    avatar: avatar || null,
+    realName: realName.trim(),
+    insuranceFund: Number(insuranceFund),
+    servicesOffered: services,
+    facebookLink: facebookLink || null,
+    zaloLink: zaloLink || null,
+    telegramLink: telegramLink || null,
+    verificationBadge: "true",
+  }).returning();
+
+  await db.insert(activityLogTable).values({ type: "USER_PROMOTED_GDV", description: `Thêm GDV độc lập: ${profile.realName}` });
+
+  res.json({
+    id: profile.id,
+    userId: profile.userId,
+    userName: null,
+    userAvatar: profile.avatar,
+    avatar: profile.avatar,
+    realName: profile.realName,
+    servicesOffered: profile.servicesOffered ?? [],
+    insuranceFund: profile.insuranceFund,
+    facebookLink: profile.facebookLink,
+    zaloLink: profile.zaloLink,
+    telegramLink: profile.telegramLink,
+    totalTransactions: profile.totalTransactions,
+    successRate: profile.successRate,
+    verificationBadge: profile.verificationBadge === "true",
+    createdAt: profile.createdAt.toISOString(),
+  });
+});
+
 router.post("/admin/users/:id/promote-gdv", requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
@@ -295,13 +345,14 @@ router.delete("/admin/middlemen/:id", requireAdmin, async (req, res): Promise<vo
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
-  const [profile] = await db.delete(middlemanProfilesTable).where(eq(middlemanProfilesTable.userId, id)).returning();
+  const [profile] = await db.delete(middlemanProfilesTable).where(eq(middlemanProfilesTable.id, id)).returning();
   if (!profile) { res.status(404).json({ error: "GDV profile not found" }); return; }
 
-  await db.update(usersTable).set({ role: "MEMBER" }).where(eq(usersTable.id, id));
+  if (profile.userId) {
+    await db.update(usersTable).set({ role: "MEMBER" }).where(eq(usersTable.id, profile.userId));
+  }
 
-  const [user] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, id));
-  await db.insert(activityLogTable).values({ type: "GDV_REMOVED", description: `Thu hồi GDV: ${user?.name ?? id}` });
+  await db.insert(activityLogTable).values({ type: "GDV_REMOVED", description: `Thu hồi GDV: ${profile.realName}` });
 
   res.sendStatus(204);
 });

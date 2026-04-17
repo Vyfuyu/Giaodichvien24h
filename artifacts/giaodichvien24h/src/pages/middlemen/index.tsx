@@ -21,11 +21,11 @@ export default function Middlemen() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const handleRemove = (e: React.MouseEvent, userId: number, name: string) => {
+  const handleRemove = (e: React.MouseEvent, profileId: number, name: string) => {
     e.preventDefault();
     e.stopPropagation();
     if (!confirm(`Thu hồi quyền GDV của "${name}"? Hồ sơ GDV sẽ bị xóa.`)) return;
-    removeGdv.mutate({ id: userId }, {
+    removeGdv.mutate({ id: profileId }, {
       onSuccess: () => {
         toast({ title: `Đã thu hồi GDV: ${name}` });
         queryClient.invalidateQueries({ queryKey: ["/api/middlemen"] });
@@ -71,11 +71,11 @@ export default function Middlemen() {
             ))
           ) : middlemen?.length ? (
             middlemen.map((gdv) => (
-              <Link key={gdv.id} href={`/middlemen/${gdv.userId}`}>
+              <Link key={gdv.id} href={`/middlemen/${gdv.id}`}>
                 <Card className="hover:border-primary/50 transition-colors bg-card border-border cursor-pointer">
                   <CardContent className="p-4 flex gap-4 items-center">
                     <Avatar className="w-16 h-16 border-2 border-primary/20 shrink-0">
-                      <AvatarImage src={gdv.userAvatar || undefined} />
+                      <AvatarImage src={(gdv as any).avatar || gdv.userAvatar || undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
                         {gdv.realName?.charAt(0) || "G"}
                       </AvatarFallback>
@@ -98,7 +98,7 @@ export default function Middlemen() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-destructive hover:bg-destructive/10 shrink-0"
-                              onClick={(e) => handleRemove(e, gdv.userId, gdv.realName)}
+                              onClick={(e) => handleRemove(e, gdv.id, gdv.realName)}
                               disabled={removeGdv.isPending}
                               title="Thu hồi GDV"
                             >

@@ -4,17 +4,17 @@ import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle, Facebook, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, ShieldCheck, AlertTriangle, Facebook, MessageCircle, Send } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function MiddlemanProfile() {
   const { id } = useParams<{ id: string }>();
-  const userId = parseInt(id || "0", 10);
-  
-  const { data: gdv, isLoading } = useGetMiddleman(userId, {
+  const profileId = parseInt(id || "0", 10);
+
+  const { data: gdv, isLoading } = useGetMiddleman(profileId, {
     query: {
-      enabled: !!userId,
-      queryKey: getGetMiddlemanQueryKey(userId),
+      enabled: !!profileId,
+      queryKey: getGetMiddlemanQueryKey(profileId),
     }
   });
 
@@ -41,6 +41,8 @@ export default function MiddlemanProfile() {
     );
   }
 
+  const hasContact = gdv.facebookLink || gdv.zaloLink || gdv.telegramLink;
+
   return (
     <MobileLayout>
       <div className="bg-background pb-24">
@@ -55,12 +57,12 @@ export default function MiddlemanProfile() {
           <div className="h-24 bg-gradient-to-r from-primary/20 to-primary/5"></div>
           <div className="px-6 pb-6 relative">
             <Avatar className="w-24 h-24 border-4 border-background absolute -top-12 shadow-lg">
-              <AvatarImage src={gdv.userAvatar || undefined} />
+              <AvatarImage src={(gdv as any).avatar || gdv.userAvatar || undefined} />
               <AvatarFallback className="bg-primary text-primary-foreground font-bold text-3xl">
                 {gdv.realName?.charAt(0) || "G"}
               </AvatarFallback>
             </Avatar>
-            
+
             <div className="mt-14">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 {gdv.realName}
@@ -68,69 +70,73 @@ export default function MiddlemanProfile() {
                   <ShieldCheck className="w-6 h-6 text-primary" />
                 )}
               </h2>
-              <p className="text-muted-foreground">@{gdv.userName}</p>
+              {gdv.servicesOffered.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">{gdv.servicesOffered[0]}</p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2 mt-4">
-              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                Quỹ bảo hiểm: {(gdv.insuranceFund / 1000000).toFixed(1)}M VNĐ
+              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 text-sm px-3 py-1">
+                Quỹ cọc: {(gdv.insuranceFund / 1000000).toFixed(1)}M VNĐ
               </Badge>
-              <Badge variant="outline" className="border-primary/20">
-                <CheckCircle2 className="w-3 h-3 mr-1 text-green-500" /> 
-                Tỉ lệ thành công: {gdv.successRate}%
-              </Badge>
-              <Badge variant="outline" className="border-primary/20">
-                {gdv.totalTransactions} Giao dịch
-              </Badge>
+              {gdv.verificationBadge && (
+                <Badge variant="outline" className="border-green-500/30 text-green-500 text-sm px-3 py-1">
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Đã xác thực
+                </Badge>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="p-4 space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Dịch vụ cung cấp</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {gdv.servicesOffered.map((srv) => (
-                  <Badge key={srv} variant="secondary">{srv}</Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="p-4 space-y-4">
+          {gdv.servicesOffered.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">Dịch vụ cung cấp</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {gdv.servicesOffered.map((srv) => (
+                    <Badge key={srv} variant="secondary">{srv}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Liên hệ công việc</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {gdv.facebookLink && (
-                <Button variant="outline" className="w-full justify-start h-12" asChild>
-                  <a href={gdv.facebookLink} target="_blank" rel="noreferrer">
-                    <Facebook className="w-5 h-5 mr-3 text-blue-500" /> Facebook Cá Nhân
-                  </a>
-                </Button>
-              )}
-              {gdv.zaloLink && (
-                <Button variant="outline" className="w-full justify-start h-12" asChild>
-                  <a href={gdv.zaloLink} target="_blank" rel="noreferrer">
-                    <MessageCircle className="w-5 h-5 mr-3 text-blue-400" /> Zalo
-                  </a>
-                </Button>
-              )}
-              {gdv.telegramLink && (
-                <Button variant="outline" className="w-full justify-start h-12" asChild>
-                  <a href={gdv.telegramLink} target="_blank" rel="noreferrer">
-                    <Send className="w-5 h-5 mr-3 text-sky-500" /> Telegram
-                  </a>
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          {hasContact && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">Liên hệ</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {gdv.facebookLink && (
+                  <Button variant="outline" className="w-full justify-start h-12" asChild>
+                    <a href={gdv.facebookLink} target="_blank" rel="noreferrer">
+                      <Facebook className="w-5 h-5 mr-3 text-blue-500" /> Facebook
+                    </a>
+                  </Button>
+                )}
+                {gdv.zaloLink && (
+                  <Button variant="outline" className="w-full justify-start h-12" asChild>
+                    <a href={`https://zalo.me/${gdv.zaloLink.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                      <MessageCircle className="w-5 h-5 mr-3 text-blue-400" /> Zalo: {gdv.zaloLink}
+                    </a>
+                  </Button>
+                )}
+                {gdv.telegramLink && (
+                  <Button variant="outline" className="w-full justify-start h-12" asChild>
+                    <a href={`https://t.me/${gdv.telegramLink.replace(/^@/, "")}`} target="_blank" rel="noreferrer">
+                      <Send className="w-5 h-5 mr-3 text-sky-500" /> Telegram: {gdv.telegramLink}
+                    </a>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="bg-destructive/10 rounded-xl p-4 flex items-start gap-3 border border-destructive/20">
-            <AlertTriangle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-semibold text-destructive mb-1">Cảnh báo giả mạo</p>
               <p className="text-muted-foreground">Luôn kiểm tra kỹ link Facebook, Zalo, Telegram. Cẩn thận các tài khoản giả mạo (fake link, fake avatar).</p>
